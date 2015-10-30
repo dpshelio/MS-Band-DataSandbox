@@ -2,7 +2,7 @@
 Simple WPF app which uses the MS Health Cloud API to download user-specified data sets acquired with the Microsoft Band. 
 
 If you're only interested in the executable, it is here:
-https://github.com/dendriticspine/MS-Band-DataSandbox/raw/master/BandSandbox1.0.zip
+https://github.com/dendriticspine/MS-Band-DataSandbox/raw/master/BandSandbox-current.zip
 
 Information on using the Microsoft Health Cloud API:
 https://developer.microsoftband.com/cloudAPI
