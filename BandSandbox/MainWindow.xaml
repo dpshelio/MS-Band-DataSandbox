@@ -134,12 +134,13 @@
         <Button x:Name="exitAppButton" Content="Exit BandSandbox" HorizontalAlignment="Right" Margin="0,0,10,228" Width="150" Click="exitAppButton_Click" FontSize="13.333" BorderThickness="2" FontWeight="Bold" Background="#FFE5E5E5" Height="30" VerticalAlignment="Bottom"/>
         <ComboBox x:Name="selOptionalData" HorizontalAlignment="Left" Margin="132,255,0,0" VerticalContentAlignment="Center" VerticalAlignment="Top" Width="289" SelectionChanged="optionEndDateChanged" FontSize="13.333" BorderThickness="2" IsEnabled="False">
             <ComboBoxItem Content="Basic Activity Summary Data"/>
-            <ComboBoxItem Content="Segment Details w/GPS Data"/>
+            <ComboBoxItem Content="GPS Data &amp; Segment Details"/>
             <ComboBoxItem Content="Minute Interval Summaries"/>
         </ComboBox>
         <Label x:Name="label" Content="Note: Details and Minute Summaries may take minutes to download." HorizontalAlignment="Left" Margin="443,255,0,0" VerticalAlignment="Top" FontSize="9.333"/>
         <CheckBox x:Name="checkActAll" Content="All" HorizontalAlignment="Left" Margin="132,226,0,0" VerticalAlignment="Top" IsEnabled="False" BorderThickness="2" BorderBrush="#FF00B9F2" FontSize="13.333" Checked="optionActivitiesAll" Unchecked="optionActivitiesAll"/>
         <TextBlock x:Name="responseText" Margin="10,0,0,106" TextWrapping="Wrap" Background="#66BFCDDB" Text="Data Stream" FontSize="9.333" HorizontalAlignment="Left" Width="760" Height="106" VerticalAlignment="Bottom"/>
         <TextBlock x:Name="statusURL" Margin="10,0,0,49" TextWrapping="Wrap" Background="#66BFCDDB" Text="URL Requests" FontSize="9.333" HorizontalAlignment="Left" Width="760" Height="52" VerticalAlignment="Bottom"/>
+        <Label x:Name="textHistoryNote" Content="(October 2014 - Current)" Margin="0,88,17,0" VerticalAlignment="Top" FontSize="9.333" HorizontalAlignment="Right"/>
     </Grid>
 </Window>

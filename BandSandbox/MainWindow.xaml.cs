@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.IO;
@@ -24,8 +25,8 @@ namespace BandSandbox {
 
         // ClientId and ClientSecret obtained from: https://account.live.com/developers/applications
         // create app > change "mobile or desktop client app" to yes > c/p from app settings
-        private const string ClientId = "REPLACE_WITH_YOUR_CLIENT_ID";
-        private const string ClientSecret = "REPLACE_WITH_YOUR_CLIENT_SECRET";
+        private const string ClientId = "replace-with-your-own-client-id";
+        private const string ClientSecret = "replace-with-your-own-client-secret";
 
         // minimum set of authorization scopes
         private const string Scopes = "mshealth.ReadProfile mshealth.ReadActivityHistory mshealth.ReadActivityLocation mshealth.ReadDevices";
@@ -39,6 +40,8 @@ namespace BandSandbox {
         private int todayMonth = DateTime.Now.Month;
         private int todayDay = DateTime.Now.Day;
         private int todayYear = DateTime.Now.Year;
+        private int secDelayRequest = 6;
+        private string saveFilePath = "";
         private DateTime startDateDT;
         private DateTime endDateDT;
         private DateTime earliestDT = new DateTime(2014, 10, 29);
@@ -116,13 +119,13 @@ namespace BandSandbox {
 
         // download ms health cloud profile data
         private async void getProfileButton_Click(object sender, RoutedEventArgs e) {
-            this.statusBar.Text = "Requesting profile data...";
+            this.statusBar.Text = "Requesting data from MS Health Cloud...";
             await this.PerformRequest("Profile");
         }
 
         // download ms health cloud devices data
         private async void getDevicesButton_Click(object sender, RoutedEventArgs e) {
-            this.statusBar.Text = "Requesting device data...";
+            this.statusBar.Text = "Requesting data from MS Health Cloud...";
             await this.PerformRequest("Devices");
         }
 
@@ -144,7 +147,8 @@ namespace BandSandbox {
         // get daily summary data
         private async void getDailySummaryButton_Click(object sender, RoutedEventArgs e) {
             if (this.validateDates()) {
-                this.statusBar.Text = "Requesting daily summary data...";
+                this.secDelayRequest = 2;
+                this.statusBar.Text = "Requesting data from MS Health Cloud...";
                 await this.PerformRequest("Summaries/Daily", string.Format("startTime={0}&endTime={1}&maxPageSize=31", this.userStartDate, this.userEndDate));
             }
         }
@@ -152,7 +156,8 @@ namespace BandSandbox {
         // get hourly summary data
         private async void getHourlySummaryButton_Click(object sender, RoutedEventArgs e) {
             if (this.validateDates()) {
-                this.statusBar.Text = "Requesting hourly summary data...";
+                this.secDelayRequest = 2;
+                this.statusBar.Text = "Requesting data from MS Health Cloud...";
                 await this.PerformRequest("Summaries/Hourly", string.Format("startTime={0}&endTime={1}&maxPageSize=48", this.userStartDate, this.userEndDate));
             }
         }
@@ -215,15 +220,20 @@ namespace BandSandbox {
                 }
                 activityTypes = activityTypes.TrimEnd((','));
                 if (this.selOptionalData.SelectedIndex <= 0) {
+                    this.secDelayRequest = 3;
                     additionalOptions = string.Empty;
                 } else if (this.selOptionalData.SelectedIndex == 1) {
                     additionalOptions = additionalOptions + "Details,MapPoints";
+                    this.secDelayRequest = 10;
+                    pageSizeMod = 15;
                 } else if (this.selOptionalData.SelectedIndex == 2) {
                     additionalOptions = additionalOptions + "MinuteSummaries";
-                }
+                    this.secDelayRequest = 10;
+                    pageSizeMod = 10;
+                } 
 
                 if (activityEmpty == false) {
-                    this.statusBar.Text = "Requesting activity data...";
+                    this.statusBar.Text = "Requesting data from MS Health Cloud...";
                     await this.PerformRequest("Activities", string.Format("startTime={0}&endTime={1}{2}{3}&maxPageSize={4}", this.userStartDate, this.userEndDate, additionalOptions, activityTypes, pageSizeMod));
                 }
 
@@ -231,55 +241,98 @@ namespace BandSandbox {
         }
 
         // save the data that was acquired to a text file
-        private void saveAcquiredData(string fullTextReply) {
-            SaveFileDialog saveFileDialog1 = new SaveFileDialog();
+        private void saveAcquiredData(string fullTextReply, int newFileFlag) {
+            if (newFileFlag == 1) {
+                SaveFileDialog saveFileDialog1 = new SaveFileDialog();
 
-            saveFileDialog1.Filter = "txt files (*.txt)|*.txt";
-            saveFileDialog1.FilterIndex = 2;
-            saveFileDialog1.Title = "Save BandSandbox Data";
-            saveFileDialog1.ShowDialog();
+                saveFileDialog1.Filter = "txt files (*.txt)|*.txt";
+                saveFileDialog1.FilterIndex = 2;
+                saveFileDialog1.Title = "Save BandSandbox Data";
+                saveFileDialog1.ShowDialog();
 
-            // If the file name is not an empty string open it for saving.
-            if (saveFileDialog1.FileName != "") {
-                System.IO.StreamWriter file = new System.IO.StreamWriter(saveFileDialog1.FileName);
-                file.WriteLine(fullTextReply);
-                file.Close();
-                this.statusBar.Text = "File " + saveFileDialog1.FileName + " saved.";
-            } else {
-                this.statusBar.Text = "No filename selected.";
+                // If the file name is not an empty string open it for saving.
+                if (saveFileDialog1.FileName != "") {
+                    this.saveFilePath = saveFileDialog1.FileName;
+                    StreamWriter file = new StreamWriter(saveFileDialog1.FileName);
+                    file.WriteLine(fullTextReply);
+                    file.Close();
+                    this.statusBar.Text = "Data will be saved in: " + saveFileDialog1.FileName;
+                } else {
+                    this.saveFilePath = @".\ms_band_data.txt";
+                    this.statusBar.Text = "No filename entered, defaulting to: ms_band_data.txt";
+                    StreamWriter file = new StreamWriter(this.saveFilePath);
+                    file.WriteLine(fullTextReply);
+                    file.Close();
+                }
+            } else if (newFileFlag == 2) {
+                using (StreamWriter file = File.AppendText(this.saveFilePath)) {
+                    file.WriteLine(fullTextReply);
+                }
+            }
+        }
+
+        public static async Task pauseActionEvery(Action action, TimeSpan interval, int secDelay) {
+            CancellationTokenSource cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(secDelay));
+            CancellationToken cancellationToken = cancellation.Token;
+            while (true) {
+                action();
+                Task task = Task.Delay(interval, cancellationToken);
+
+                try {
+                    await task;
+                }
+                catch (TaskCanceledException) {
+                    return;
+                }
             }
         }
 
         // when requests have multiple pages of data, run through the pages
+        //private async Task PaginatedRequest(string nextPageURL, string bandDataAcquired, bool morePages) {
         private async Task PaginatedRequest(string nextPageURL, string bandDataAcquired, bool morePages) {
+            string respText = string.Empty;
             while (morePages == true) {
                 try {
+                    this.statusBar.Text = "Requesting data from MS Health Cloud...";
                     var uriBuilderNext = new UriBuilder(nextPageURL);
                     var request = HttpWebRequest.Create(uriBuilderNext.Uri);
                     this.statusURL.Text = uriBuilderNext.Uri.ToString();
                     request.Headers[HttpRequestHeader.Authorization] = string.Format("bearer {0}", this.creds.AccessToken);
-                    using (var response = await request.GetResponseAsync()) {
-                        using (var stream = response.GetResponseStream()) {
-                            using (var reader = new StreamReader(stream)) {
-                                string respText = reader.ReadToEnd();
-                                this.responseText.Text = respText;
-                                bandDataAcquired = bandDataAcquired + respText;
-
-                                // "nextPage":"https://api.microsofthealth.net:443/v1/me/Summaries/Daily?ct=#################"
-                                string nextPageCheck = "\"nextPage\":\"https:.+?(?=\")";
-
-                                Match newData = System.Text.RegularExpressions.Regex.Match(respText, nextPageCheck, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                                if (newData.Success) {
-                                    morePages = true;
-                                    nextPageURL = newData.Value.Remove(0, 12); // remove "nextPage":"
-                                } else {
-                                    morePages = false;
-                                    this.saveAcquiredData(bandDataAcquired);
+                    try {
+                        using (var response = await request.GetResponseAsync()) {
+                            using (var stream = response.GetResponseStream()) {
+                                using (var reader = new StreamReader(stream)) {
+                                    respText = reader.ReadToEnd();
+                                    this.responseText.Text = respText;
+                                    this.saveAcquiredData(respText, 2);
+                                    await pauseActionEvery(() => this.statusBar.Text = "Pausing between pages...", TimeSpan.FromSeconds(1), this.secDelayRequest);
                                 }
                             }
                         }
+                    } catch (WebException exception) {
+                        if (exception.Status == WebExceptionStatus.ProtocolError) {
+                            //Console.WriteLine(exception.Message);
+                            await pauseActionEvery(() => this.statusBar.Text = "Pausing for 120s to overcome rate limit...", TimeSpan.FromSeconds(1), 120);
+                            request.Abort();
+                        } else {
+                            throw;
+                        }
                     }
-                } catch (Exception ex) {
+
+
+                // "nextPage":"https://api.microsofthealth.net:443/v1/me/Summaries/Daily?ct=#################"
+                string nextPageCheck = "\"nextPage\":\"https:.+?(?=\")";
+
+                Match newData = System.Text.RegularExpressions.Regex.Match(respText, nextPageCheck, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (newData.Success) {
+                    morePages = true;
+                    nextPageURL = newData.Value.Remove(0, 12); // remove "nextPage":"
+                } else {
+                    morePages = false;
+                        this.statusBar.Text = "Multi-page download complete.";
+                }
+
+                } catch (Exception ex) { 
                     this.statusBar.Text = string.Format("There was an error with your request. {0}", ex.Message);
                 }
             }
@@ -291,7 +344,7 @@ namespace BandSandbox {
                 var uriBuilder = new UriBuilder(BaseHealthUri);
                 uriBuilder.Path += relativePath;
                 uriBuilder.Query = queryParams;
-                var request = HttpWebRequest.Create(uriBuilder.Uri);
+                var request = WebRequest.Create(uriBuilder.Uri);
                 this.statusURL.Text = uriBuilder.Uri.ToString();
                 request.Headers[HttpRequestHeader.Authorization] = string.Format("bearer {0}", this.creds.AccessToken);
 
@@ -300,7 +353,7 @@ namespace BandSandbox {
                         using (var reader = new StreamReader(stream)) {
                             string bandDataAcquired = reader.ReadToEnd();
                             this.responseText.Text = bandDataAcquired;
-
+                            this.saveAcquiredData(bandDataAcquired, 1);
                             // "nextPage":"https://api.microsofthealth.net:443/v1/me/Summaries/Daily?ct=#################"
                             string nextPageCheck = "\"nextPage\":\"https:.+?(?=\")";
                             Match newData = System.Text.RegularExpressions.Regex.Match(bandDataAcquired, nextPageCheck, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -310,7 +363,7 @@ namespace BandSandbox {
                                 //this.responseText.Text = nextPageURL;
                                 await this.PaginatedRequest(nextPageURL, bandDataAcquired, morePages);
                             } else {
-                                this.saveAcquiredData(bandDataAcquired);
+                                this.statusBar.Text = "Download complete.";
                             }
                         }
                     }
