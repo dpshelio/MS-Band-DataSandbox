@@ -1,17 +1,23 @@
 # MS-Band-DataSandbox
 Simple WPF app which uses the MS Health Cloud API to download user-specified data sets acquired with the Microsoft Band. 
 
-If you're only interested in the executable, it is here:
+If you're only interested in the executable (updated 2015/11/06), it is here:
 https://github.com/dendriticspine/MS-Band-DataSandbox/raw/master/BandSandbox-current.zip
 
 Information on using the Microsoft Health Cloud API:
 https://developer.microsoftband.com/cloudAPI
 
-Note: The code is ugly. I mean, really, really ugly. Yes, I feel shame. 
+Note: The code is ugly. I mean, really, really ugly.
 
-- Daily and Hourly summaries can take a while to download, especially if you're downloading a complete history, but you should be able to see progress being made via the app/URL/data status notifications.
-- Downloading activity summaries might have more lag between requests, so it might look like the app is doing nothing -- if you haven't received an error, it's probably still working in the background.
-- If you've selected the Details/GPS or Minute Summary options, it will probably be very, very slow between requests. This seems to be the case regardless of how I segment the data received. Downloading a year's worth of Activity Details/GPS Data for all activities took about 30 minutes for me.
-- If you receive an error for making too many requests, wait a few minutes before trying again. 
+Time for requesting 1 year+5 days (572 activities) worth of...
+Hourly Summary Data: 8 min, 31 sec
+Daily Summary Data: 28 sec
+All Activities: Basic Activity Summary Data: 19 sec
+All Activities: GPS Data & Segment Details: 6 min, 34 sec
+All Activities: Minute Interval Summaries: 18 min, 42 sec <- required additional delays between requests to avoid being throttled for going over the bandwidth limits.
+
+Updates:
+- 2015/11/01: The beginnings of some rough Python scripts for plotting Daily Summary, Hourly Summary, and Activity Summary data are here: https://github.com/dendriticspine/HealthData-Analysis
+- 2015/11/06: Added rate limiting to avoid being throttled by MS health cloud for too many requests/too much bandwidth.
 
 If you have any questions or problems: apps@dendriticspine.com
